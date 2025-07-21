@@ -22,8 +22,12 @@
           </div>
           
           <!-- Mobile Menu Toggle Button -->
-          <button class="navbar-toggler collapsed d-md-none" type="button" aria-label="Toggle navigation" aria-expanded="false">
-            <span class="navbar-toggler-icon"></span>
+          <button class="navbar-toggler-alt collapsed d-md-none" type="button" aria-label="Toggle navigation">
+            <div class="hamburger">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
           </button>
           
           <!-- Navigation Links -->
@@ -194,7 +198,7 @@
         <div class="container">
           <div class="row">
             <div class="col-md-12">
-              <img src="logo.png" alt="Payizi Global" class="footer-logo">
+              <img src="/white_icon_transparent_background.png" alt="Payizi Global" class="footer-logo">
               <h5 class="mb-3">Payizi Global</h5>
               <h4 class="text-warning mb-3">POWERING ZIMBABWE'S FINANCIAL FUTURE</h4>
               <p class="mb-2">Payizi makes sending money, paying bills, and supporting loved ones effortless.</p>
@@ -221,83 +225,46 @@
       
       <!-- Mobile Menu Toggle Script -->
       <script>
-        // Mobile menu toggle functionality
         document.addEventListener('DOMContentLoaded', function() {
-          const navbarToggler = document.querySelector('.navbar-toggler');
+          const navbarToggler = document.querySelector('.navbar-toggler-alt');
           const navbarNav = document.querySelector('.navbar-nav');
           
           if (navbarToggler && navbarNav) {
-            navbarToggler.addEventListener('click', function() {
+            navbarNav.classList.remove('show');
+            navbarToggler.classList.add('collapsed');
+            
+            navbarToggler.addEventListener('click', function(e) {
+              e.preventDefault();
+              e.stopPropagation();
               navbarNav.classList.toggle('show');
               this.classList.toggle('collapsed');
             });
             
-            // Close menu when clicking outside
             document.addEventListener('click', function(event) {
-              if (!navbarToggler.contains(event.target) && !navbarNav.contains(event.target)) {
+              if (!navbarNav.contains(event.target) && !navbarToggler.contains(event.target)) {
+                navbarNav.classList.remove('show');
+                navbarToggler.classList.add('collapsed');
+              }
+            });
+            
+            document.querySelectorAll('.nav-link').forEach(link => {
+              link.addEventListener('click', function() {
+                if (window.innerWidth < 768) {
+                  navbarNav.classList.remove('show');
+                  navbarToggler.classList.add('collapsed');
+                }
+              });
+            });
+            
+            window.addEventListener('resize', function() {
+              if (window.innerWidth >= 768) {
                 navbarNav.classList.remove('show');
                 navbarToggler.classList.add('collapsed');
               }
             });
           }
         });
-      </script>
-    <!-- Mobile Menu Toggle Script -->
-    <!-- Mobile Menu Toggle Script - Updated -->
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      const navbarToggler = document.querySelector('.navbar-toggler');
-      const navbarNav = document.querySelector('.navbar-nav');
-      
-      // Only initialize if both elements exist
-      if (navbarToggler && navbarNav) {
+        </script>
         
-        // Ensure menu starts closed on page load
-        navbarNav.classList.remove('show');
-        navbarToggler.classList.add('collapsed');
-        
-        // Toggle menu on button click
-        navbarToggler.addEventListener('click', function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-          
-          navbarNav.classList.toggle('show');
-          this.classList.toggle('collapsed');
-        });
-        
-        // Close menu when clicking outside
-        document.addEventListener('click', function(event) {
-          const isClickInsideNav = navbarNav.contains(event.target);
-          const isClickOnToggler = navbarToggler.contains(event.target);
-          
-          if (!isClickInsideNav && !isClickOnToggler && navbarNav.classList.contains('show')) {
-            navbarNav.classList.remove('show');
-            navbarToggler.classList.add('collapsed');
-          }
-        });
-        
-        // Close menu when clicking on a nav link (mobile only)
-        const navLinks = document.querySelectorAll('.nav-link');
-        navLinks.forEach(link => {
-          link.addEventListener('click', function() {
-            // Only close on mobile
-            if (window.innerWidth < 768) {
-              navbarNav.classList.remove('show');
-              navbarToggler.classList.add('collapsed');
-            }
-          });
-        });
-        
-        // Reset menu state on window resize
-        window.addEventListener('resize', function() {
-          if (window.innerWidth >= 768) {
-            // Desktop - ensure menu is always visible
-            navbarNav.classList.remove('show');
-            navbarToggler.classList.add('collapsed');
-          }
-        });
-      }
-    });
-    </script>
 </body>
 </html>
