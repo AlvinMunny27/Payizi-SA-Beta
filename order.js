@@ -273,3 +273,4 @@ function getFormData(reference) {
 function formatReview(d) {
   return `Order Ref: ${d.reference}\n\nCustomer: ${d.name}\nEmail: ${d.email}\nMobile: ${d.mobile}\n\nBeneficiary: ${d.beneficiaryName} (${d.beneficiaryMobile})\nID: ${d.beneficiaryId}\n${d.country}, ${d.location}\n\nUSD: ${d.usdAmount}\nRate: ${d.rate}\nEffective: ${d.effectiveRate}\nZAR: ${d.zarTotal}`;
 }
+
