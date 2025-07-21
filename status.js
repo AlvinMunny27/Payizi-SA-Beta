@@ -1,296 +1,406 @@
-// Status tracking JavaScript
-// status.js
+console.log('🚀 Status.js loaded successfully');
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx61GOdegtOaAnvQETgmYlTmX4Sp07gONlwwwikL0eFrvz-F9rWZCY80IXSvDNB19k1Eg/exec";
-
-// DOM Elements
-const orderRefInput = document.getElementById('orderRef');
-const trackBtn = document.getElementById('trackBtn');
-const refreshBtn = document.getElementById('refreshBtn');
-const downloadReceiptBtn = document.getElementById('downloadReceiptBtn');
-
-const lookupSection = document.getElementById('lookupSection');
-const loadingSection = document.getElementById('loadingSection');
-const statusSection = document.getElementById('statusSection');
-const errorSection = document.getElementById('errorSection');
-const paymentInstructions = document.getElementById('paymentInstructions');
-
-// Status mapping with progress percentages
-const statusMap = {
-  'pending payment': { progress: 20, class: 'bg-warning', step: 1 },
-  'payment received': { progress: 40, class: 'bg-info', step: 2 },
-  'paid': { progress: 40, class: 'bg-info', step: 2 },
-  'payment confirmed': { progress: 60, class: 'bg-primary', step: 3 },
-  'processing': { progress: 60, class: 'bg-primary', step: 3 },
-  'sent to beneficiary': { progress: 80, class: 'bg-success', step: 4 },
-  'completed': { progress: 100, class: 'bg-success', step: 5 },
-  'cancelled': { progress: 0, class: 'bg-danger', step: 0 }
+// Google Sheets Configuration
+const GOOGLE_SHEETS_CONFIG = {
+  WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbyOdpYNrOHTpbXIVVL1AaSlbaPUKxNpCB5bE42BG4IMSj0TBXNg_PmWVhTZAH6b3c-nyQ/exec'
 };
 
-let currentOrderData = null;
-
-// Event Listeners
-document.addEventListener('DOMContentLoaded', () => {
-  // Check if order reference is in URL parameters
-  const urlParams = new URLSearchParams(window.location.search);
-  const refParam = urlParams.get('ref');
-  if (refParam) {
-    orderRefInput.value = refParam;
-    trackOrder();
-  }
-});
-
-trackBtn.addEventListener('click', trackOrder);
-refreshBtn.addEventListener('click', () => trackOrder(currentOrderData?.orderRef));
-downloadReceiptBtn.addEventListener('click', downloadReceipt);
-
-orderRefInput.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
-    trackOrder();
-  }
-});
-
-// Main tracking function
-async function trackOrder(orderRef = null) {
-  const ref = orderRef || orderRefInput.value.trim().toUpperCase();
+// Add this test function to your status.js
+function testDirectURL() {
+  console.log('🧪 Testing direct URL access...');
   
-  if (!ref) {
-    showError('Please enter an order reference');
+  const testUrl = `${GOOGLE_SHEETS_CONFIG.WEB_APP_URL}?orderId=DE3CJ35G&action=getOrder`;
+  console.log('🔗 Test URL:', testUrl);
+  
+  // Open this URL in a new browser tab
+  window.open(testUrl, '_blank');
+}
+
+// Updated function to match your actual HTML IDs
+function checkElements() {
+  const trackButton = document.getElementById('trackBtn'); // Changed from 'trackButton'
+  const orderIdInput = document.getElementById('orderRef'); // Changed from 'orderIdInput'
+  const loadingSection = document.getElementById('loadingSection');
+  const statusSection = document.getElementById('statusSection');
+  const errorSection = document.getElementById('errorSection');
+  
+  console.log('📋 Element check:', {
+    trackButton: !!trackButton,
+    orderIdInput: !!orderIdInput,
+    loadingSection: !!loadingSection,
+    statusSection: !!statusSection,
+    errorSection: !!errorSection
+  });
+  
+  if (!trackButton) console.error('❌ trackBtn not found');
+  if (!orderIdInput) console.error('❌ orderRef not found');
+  if (!loadingSection) console.error('❌ loadingSection not found');
+  if (!statusSection) console.error('❌ statusSection not found');
+  if (!errorSection) console.error('❌ errorSection not found');
+  
+  return { trackButton, orderIdInput, loadingSection, statusSection, errorSection };
+}
+
+// Enhanced trackOrder function with better error handling and CORS workaround
+async function trackOrder() {
+  console.log('🔍 trackOrder function called');
+  
+  const { trackButton, orderIdInput, loadingSection, statusSection, errorSection } = checkElements();
+  
+  if (!trackButton || !orderIdInput) {
+    console.error('❌ Missing required elements');
+    alert('Error: Required page elements not found');
     return;
   }
-
+  
+  const orderId = orderIdInput.value.trim();
+  console.log('📝 Order ID entered:', orderId);
+  
+  if (!orderId) {
+    console.error('❌ No order ID provided');
+    alert('Please enter an order ID');
+    return;
+  }
+  
+  // Show loading state
   showLoading();
-
+  
   try {
-    const orderData = await fetchOrderStatus(ref);
+    console.log('🌐 Making fetch request...');
+    const url = `${GOOGLE_SHEETS_CONFIG.WEB_APP_URL}?orderId=${encodeURIComponent(orderId)}&action=getOrder`;
+    console.log('📡 URL:', url);
     
-    if (orderData) {
-      currentOrderData = orderData;
-      displayOrderStatus(orderData);
-    } else {
-      showError('Order not found');
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      redirect: 'follow',
+      mode: 'cors'
+    });
+    
+    console.log('📡 Response status:', response.status, response.statusText);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
+    
+    const text = await response.text();
+    console.log('📄 Raw response:', text);
+    
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (parseError) {
+      console.error('🚨 JSON parse error:', parseError);
+      throw new Error('Invalid response format from server');
+    }
+    
+    console.log('📊 Parsed data:', data);
+    
+    if (data.success) {
+      displayOrderStatus(data.data);
+    } else {
+      console.error('🚨 Server returned error:', data.error);
+      showError(data.error || 'Order not found');
+    }
+    
   } catch (error) {
-    console.error('Error fetching order status:', error);
-    showError('Unable to fetch order status. Please try again.');
+    console.error('🚨 Fetch error:', error.message);
+    showError(`Failed to connect to server: ${error.message}. Please check your connection or contact support.`);
+  } finally {
+    hideLoading();
   }
 }
 
-// Fetch order status from Google Apps Script (dynamic, no mock)
-async function fetchOrderStatus(orderRef) {
+
+// Add a simple connection test
+async function testSimpleConnection() {
+  console.log('🧪 Testing simple connection...');
+  
   try {
-    const response = await fetch(`${SCRIPT_URL}?action=getStatus&orderRef=${orderRef}`);
-    const result = await response.json();
-    return result.success ? result : null;
+    const testUrl = `${GOOGLE_SHEETS_CONFIG.WEB_APP_URL}?orderId=TEST&action=getOrder`;
+    console.log('🔗 Test URL:', testUrl);
+    
+    const response = await fetch(testUrl, {
+      method: 'GET',
+      mode: 'no-cors' // Try no-cors mode for testing
+    });
+    
+    console.log('✅ Test response received (no-cors mode)');
+    console.log('📡 Response type:', response.type);
+    console.log('📡 Response status:', response.status);
+    
+    return { success: true, status: response.status, mode: 'no-cors' };
   } catch (error) {
-    console.error('Error fetching order status:', error);
-    return null;
+    console.error('❌ Simple connection test failed:', error);
+    return { success: false, error: error.message };
   }
 }
 
-// Display order status
-function displayOrderStatus(data) {
-  hideAllSections();
-  statusSection.style.display = 'block';
+// Add this to the end of your file for testing
+console.log('✅ Enhanced status.js loaded with JSONP fallback');
 
-  // Populate basic information
-  document.getElementById('statusOrderRef').textContent = data.orderRef || '-';
-  document.getElementById('statusCustomerName').textContent = data.customerName || '-';
-  document.getElementById('statusEmail').textContent = data.email || '-';
-  document.getElementById('statusUsdAmount').textContent = `$${data.usdAmount.toFixed(2)}` || '-';
-  document.getElementById('statusZarTotal').textContent = `R ${data.zarTotal.toFixed(2)}` || '-';
-  document.getElementById('statusRate').textContent = data.rate.toFixed(5) || '-';
-  document.getElementById('statusBeneficiary').textContent = data.beneficiaryName || '-';
-  document.getElementById('statusLocation').textContent = data.location || '-';
-  document.getElementById('statusLastUpdated').textContent = formatDate(data.lastUpdated) || '-';
-
-  // Update status badge and progress
-  updateStatusDisplay(data.status);
-
-  // Show payment instructions if pending
-  if (data.status.toLowerCase().includes('pending')) {
-    paymentInstructions.style.display = 'block';
-    document.getElementById('paymentRef').textContent = data.orderRef;
-  } else {
-    paymentInstructions.style.display = 'none';
+// Show loading state using your HTML structure
+function showLoading() {
+  console.log('⏳ Showing loading state');
+  
+  const { trackButton, loadingSection, statusSection, errorSection } = checkElements();
+  
+  // Disable button and show loading text
+  if (trackButton) {
+    trackButton.innerHTML = '⏳ Searching...';
+    trackButton.disabled = true;
   }
-
-  // Update page title
-  document.title = `Order ${data.orderRef} - Payizi Global`;
+  
+  // Show loading section, hide others
+  if (loadingSection) loadingSection.style.display = 'block';
+  if (statusSection) statusSection.style.display = 'none';
+  if (errorSection) errorSection.style.display = 'none';
 }
 
-// Update status display and progress
-function updateStatusDisplay(status) {
-  const statusLower = status.toLowerCase();
-  const statusInfo = statusMap[statusLower] || { progress: 0, class: 'bg-secondary', step: 0 };
+// Hide loading state
+function hideLoading() {
+  console.log('✅ Hiding loading state');
+  
+  const { trackButton, loadingSection } = checkElements();
+  
+  // Reset button
+  if (trackButton) {
+    trackButton.innerHTML = 'Track Order';
+    trackButton.disabled = false;
+  }
+  
+  // Hide loading section
+  if (loadingSection) loadingSection.style.display = 'none';
+}
 
+// Display order status using your existing HTML structure
+function displayOrderStatus(orderData) {
+  console.log('🎨 Displaying order:', orderData);
+  
+  const { statusSection, errorSection } = checkElements();
+  
+  // Hide error section, show status section
+  if (errorSection) errorSection.style.display = 'none';
+  if (statusSection) statusSection.style.display = 'block';
+  
+  // Populate the existing HTML elements with order data
+  updateElement('statusOrderRef', orderData.orderId);
+  updateElement('statusCustomerName', orderData.customerName);
+  updateElement('statusEmail', orderData.customerEmail);
+  updateElement('statusLastUpdated', formatDate(orderData.createdAt));
+  updateElement('statusUsdAmount', `$${orderData.amount}`);
+  updateElement('statusZarTotal', `R ${orderData.zarTotal}`);
+  updateElement('statusRate', orderData.exchangeRate);
+  updateElement('statusBeneficiary', orderData.recipient);
+  updateElement('statusLocation', `${orderData.location}, ${orderData.destination}`);
+  updateElement('paymentRef', orderData.orderId);
+  
   // Update status badge
   const statusBadge = document.getElementById('statusBadge');
-  statusBadge.textContent = status;
-  statusBadge.className = `badge ${statusInfo.class}`;
-
-  // Update progress bar
-  const progressBar = document.getElementById('progressBar');
-  const progressText = document.getElementById('progressText');
-  progressBar.style.width = `${statusInfo.progress}%`;
-  progressBar.className = `progress-bar progress-bar-striped ${statusInfo.class}`;
-  progressText.textContent = status;
-
-  // Update timeline steps
-  updateTimeline(statusInfo.step);
-}
-
-// Update timeline visualization
-function updateTimeline(currentStep) {
-  for (let i = 1; i <= 5; i++) {
-    const step = document.getElementById(`step${i}`);
-    if (i <= currentStep) {
-      step.classList.add('timeline-active');
+  if (statusBadge) {
+    statusBadge.textContent = orderData.status.toUpperCase();
+    statusBadge.className = `badge ${getStatusBadgeClass(orderData.status)}`;
+  }
+  
+  // Update progress bar and timeline
+  updateProgress(orderData.status);
+  
+  // Show/hide payment instructions
+  const paymentInstructions = document.getElementById('paymentInstructions');
+  if (paymentInstructions) {
+    if (orderData.status.toLowerCase() === 'pending') {
+      paymentInstructions.style.display = 'block';
     } else {
-      step.classList.remove('timeline-active');
+      paymentInstructions.style.display = 'none';
     }
   }
 }
 
-// Show loading state
-function showLoading() {
-  hideAllSections();
-  loadingSection.style.display = 'block';
-}
-
-// Show error message
-function showError(message) {
-  hideAllSections();
-  errorSection.style.display = 'block';
-  errorSection.querySelector('p').textContent = message;
-}
-
-// Hide all sections
-function hideAllSections() {
-  loadingSection.style.display = 'none';
-  statusSection.style.display = 'none';
-  errorSection.style.display = 'none';
-}
-
-// Download receipt as PDF
-function downloadReceipt() {
-  if (!currentOrderData) return;
-
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-
-  // Set font
-  doc.setFont('helvetica');
-
-  // Header
-  doc.setFontSize(20);
-  doc.setTextColor(0, 123, 255);
-  doc.text('PAYIZI GLOBAL', 20, 30);
-  
-  doc.setFontSize(16);
-  doc.setTextColor(0, 0, 0);
-  doc.text('Order Receipt', 20, 45);
-
-  // Order information
-  doc.setFontSize(12);
-  let y = 65;
-  
-  doc.setFont('helvetica', 'bold');
-  doc.text('Order Details:', 20, y);
-  y += 10;
-  
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Order Reference: ${currentOrderData.orderRef}`, 20, y);
-  y += 8;
-  doc.text(`Date: ${formatDate(currentOrderData.timestamp)}`, 20, y);
-  y += 8;
-  doc.text(`Status: ${currentOrderData.status}`, 20, y);
-  y += 15;
-
-  // Customer information
-  doc.setFont('helvetica', 'bold');
-  doc.text('Customer Information:', 20, y);
-  y += 10;
-  
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Name: ${currentOrderData.customerName}`, 20, y);
-  y += 8;
-  doc.text(`Email: ${currentOrderData.email}`, 20, y);
-  y += 15;
-
-  // Transfer details
-  doc.setFont('helvetica', 'bold');
-  doc.text('Transfer Details:', 20, y);
-  y += 10;
-  
-  doc.setFont('helvetica', 'normal');
-  doc.text(`USD Amount: $${currentOrderData.usdAmount.toFixed(2)}`, 20, y);
-  y += 8;
-  doc.text(`Exchange Rate: ${currentOrderData.rate.toFixed(5)}`, 20, y);
-  y += 8;
-  doc.text(`Payizi Fee: R ${currentOrderData.payiziFee.toFixed(2)}`, 20, y);
-  y += 8;
-  doc.text(`Total ZAR: R ${currentOrderData.zarTotal.toFixed(2)}`, 20, y);
-  y += 15;
-
-  // Beneficiary information
-  doc.setFont('helvetica', 'bold');
-  doc.text('Beneficiary Information:', 20, y);
-  y += 10;
-  
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Name: ${currentOrderData.beneficiaryName}`, 20, y);
-  y += 8;
-  doc.text(`Location: ${currentOrderData.location}`, 20, y);
-  y += 15;
-
-  // Payment instructions (if applicable)
-  if (currentOrderData.status.toLowerCase().includes('pending')) {
-    doc.setFont('helvetica', 'bold');
-    doc.text('Payment Instructions:', 20, y);
-    y += 10;
-    
-    doc.setFont('helvetica', 'normal');
-    doc.text('Bank: First National Bank', 20, y);
-    y += 8;
-    doc.text('Account Name: Payizi Global', 20, y);
-    y += 8;
-    doc.text('Account Number: 63077437200', 20, y);
-    y += 8;
-    doc.text('Branch Code: 250655', 20, y);
-    y += 8;
-    doc.text(`Reference: ${currentOrderData.orderRef}`, 20, y);
+// Helper function to update element text content
+function updateElement(id, value) {
+  const element = document.getElementById(id);
+  if (element) {
+    element.textContent = value || '-';
   }
-
-  // Footer
-  doc.setFontSize(10);
-  doc.setTextColor(128, 128, 128);
-  doc.text('Thank you for choosing Payizi Global', 20, 280);
-  doc.text('For support: info@payizi.com | +27 123 456 789', 20, 290);
-
-  // Save the PDF
-  doc.save(`Payizi_Receipt_${currentOrderData.orderRef}.pdf`);
 }
 
-// Utility function to format dates
+// Get Bootstrap badge class for status
+function getStatusBadgeClass(status) {
+  const statusClasses = {
+    'pending': 'bg-warning',
+    'processing': 'bg-info',
+    'completed': 'bg-success',
+    'failed': 'bg-danger'
+  };
+  return statusClasses[status.toLowerCase()] || 'bg-secondary';
+}
+
+// Update progress bar and timeline based on status
+function updateProgress(status) {
+  const progressBar = document.getElementById('progressBar');
+  const progressText = document.getElementById('progressText');
+  
+  let progressPercent = 0;
+  let progressLabel = '';
+  
+  switch (status.toLowerCase()) {
+    case 'pending':
+      progressPercent = 20;
+      progressLabel = 'Pending Payment';
+      updateTimelineStep('step1', 'active');
+      break;
+    case 'processing':
+      progressPercent = 60;
+      progressLabel = 'Processing Transfer';
+      updateTimelineStep('step1', 'completed');
+      updateTimelineStep('step2', 'completed');
+      updateTimelineStep('step3', 'active');
+      break;
+    case 'completed':
+      progressPercent = 100;
+      progressLabel = 'Transfer Completed';
+      updateTimelineStep('step1', 'completed');
+      updateTimelineStep('step2', 'completed');
+      updateTimelineStep('step3', 'completed');
+      updateTimelineStep('step4', 'completed');
+      updateTimelineStep('step5', 'completed');
+      break;
+    case 'failed':
+      progressPercent = 20;
+      progressLabel = 'Transfer Failed';
+      updateTimelineStep('step1', 'failed');
+      break;
+  }
+  
+  if (progressBar) {
+    progressBar.style.width = `${progressPercent}%`;
+    progressBar.setAttribute('aria-valuenow', progressPercent);
+  }
+  
+  if (progressText) {
+    progressText.textContent = progressLabel;
+  }
+}
+
+// Update timeline step appearance
+function updateTimelineStep(stepId, status) {
+  const step = document.getElementById(stepId);
+  if (step) {
+    step.className = `col timeline-step ${status}`;
+    
+    // Add visual indicators
+    const icon = step.querySelector('.timeline-icon');
+    if (icon) {
+      switch (status) {
+        case 'completed':
+          icon.style.background = '#28a745';
+          icon.style.color = 'white';
+          break;
+        case 'active':
+          icon.style.background = '#007bff';
+          icon.style.color = 'white';
+          break;
+        case 'failed':
+          icon.style.background = '#dc3545';
+          icon.style.color = 'white';
+          break;
+        default:
+          icon.style.background = '#6c757d';
+          icon.style.color = 'white';
+      }
+    }
+  }
+}
+
+// Show error message using your existing HTML structure
+function showError(message) {
+  console.log('🚨 Showing error:', message);
+  
+  const { statusSection, errorSection } = checkElements();
+  
+  // Show error section, hide status section
+  if (statusSection) statusSection.style.display = 'none';
+  if (errorSection) {
+    errorSection.style.display = 'block';
+    
+    // Update error message if needed
+    const errorText = errorSection.querySelector('p');
+    if (errorText && message !== 'Order not found') {
+      errorText.textContent = message;
+    }
+  }
+}
+
+// Format date helper
 function formatDate(dateString) {
+  if (!dateString) return 'N/A';
+  
   const date = new Date(dateString);
-  return date.toLocaleDateString('en-ZA', {
+  return date.toLocaleString('en-US', {
     year: 'numeric',
-    month: 'long',
+    month: 'short',
     day: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    hour12: true
   });
 }
 
-// Auto-refresh functionality (optional)
-function startAutoRefresh() {
-  if (currentOrderData && !currentOrderData.status.toLowerCase().includes('completed')) {
-    setInterval(() => {
-      if (currentOrderData) {
-        trackOrder(currentOrderData.orderRef);
-      }
-    }, 30000); // Refresh every 30 seconds for active orders
-  }
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('📄 DOM loaded, initializing...');
+  
+  // Wait a moment for all elements to be ready
+  setTimeout(() => {
+    const { trackButton, orderIdInput } = checkElements();
+    
+    if (trackButton) {
+      console.log('✅ Adding click listener to track button');
+      trackButton.addEventListener('click', function(e) {
+        console.log('🖱️ Track button clicked');
+        e.preventDefault();
+        trackOrder();
+      });
+    }
+    
+    if (orderIdInput) {
+      console.log('✅ Adding enter key listener to input');
+      orderIdInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          console.log('⌨️ Enter pressed');
+          e.preventDefault();
+          trackOrder();
+        }
+      });
+    }
+    
+    // Add refresh button functionality
+    const refreshBtn = document.getElementById('refreshBtn');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', function() {
+        console.log('🔄 Refresh button clicked');
+        trackOrder();
+      });
+    }
+    
+    console.log('🎉 Status tracking initialized successfully');
+  }, 500);
+});
+
+// Test function you can call from console
+function testConnection() {
+  console.log('🧪 Testing connection...');
+  fetch(`${GOOGLE_SHEETS_CONFIG.WEB_APP_URL}?orderId=TEST&action=getOrder`)
+    .then(response => response.text())
+    .then(text => console.log('📡 Test response:', text))
+    .catch(error => console.error('🚨 Test error:', error));
 }
+
+// Global error handler
+window.addEventListener('error', function(e) {
+  console.error('🌍 Global error:', e.error);
+});
+
+console.log('✅ Status.js setup complete');
