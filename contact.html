@@ -13,42 +13,32 @@
 </head>
 <body>
     <!-- Replace the navigation section with this corrected version -->
-<nav class="navbar">
-  <div class="container">
-    <!-- Logo/Brand Section -->
-    <div class="navbar-brand">
-      <img src="white_icon_transparent_background.png" alt="Payizi Global Logo" class="navbar-logo">
-      <span class="brand-text">Payizi Global</span>
-    </div>
-    
-    <!-- Mobile Menu Toggle Button -->
-    <button class="navbar-toggler collapsed d-md-none" type="button" aria-label="Toggle navigation" aria-expanded="false">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    
-    <!-- Navigation Links -->
-    <ul class="navbar-nav">
-      <li class="nav-item"><a href="index.html" class="nav-link">Home</a></li>
-      <li class="nav-item"><a href="status.html" class="nav-link">Track Order</a></li>
-      <li class="nav-item"><a href="contact.html" class="nav-link active">Contact</a></li>
-    </ul>
-  </div>
-</nav>
-
-<!-- Update the main content description -->
-<main class="container mt-4">
-  <!-- Page Header -->
-  <div class="text-center mb-5">
-    <h1 class="display-5 fw-bold text-primary">
-      <i class="bi bi-headset"></i> Contact Us
-    </h1>
-    <p class="lead text-muted">
-      We're here to help with your international payment needs
-    </p>
-  </div>
-  
+    <nav class="navbar">
+        <div class="container">
+            <!-- Logo/Brand Section -->
+            <div class="navbar-brand">
+            <img src="white_icon_transparent_background.png" alt="Payizi Global Logo" class="navbar-logo">
+            <span class="brand-text">Payizi Global</span>
+            </div>
+            
+            <!-- Mobile Menu Toggle Button -->
+            <button class="navbar-toggler-alt collapsed d-md-none" type="button" aria-label="Toggle navigation">
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            </button>
+            
+            <!-- Navigation Links -->
+            <ul class="navbar-nav">
+            <li class="nav-item"><a href="index.html" class="nav-link">Home</a></li>
+            <li class="nav-item"><a href="status.html" class="nav-link">Track Order</a></li>
+            <li class="nav-item"><a href="contact.html" class="nav-link active">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
   <!-- Rest of your existing content stays the same -->
-</main>
 
   <main class="container mt-4">
     <!-- Page Header -->
@@ -283,31 +273,32 @@
     </div>
   </main>
 
-  <!-- Replace the existing footer section with this cleaned up version -->
-<footer class="bg-dark text-white text-center py-4 mt-5">
-  <div class="container">
-    <div class="row">
-      <div class="col-md-12">
-        <h5 class="mb-3">Payizi Global</h5>
-        <h4 class="text-warning mb-3">POWERING ZIMBABWE'S FINANCIAL FUTURE</h4>
-        <p class="mb-2">Payizi makes sending money, paying bills, and supporting loved ones effortless.</p>
-        <p class="mb-2">Join the fintech revolution built for Zimbabweans everywhere.</p>
-        <p class="mb-4">Your security and satisfaction are our top priorities.</p>
-        <div class="mb-3">
-          <a href="mailto:info@payizi.io" class="text-white text-decoration-none me-3">
-            <i class="bi bi-envelope"></i> info@payizi.io
-          </a>
-          <a href="https://wa.me/27652114047" target="_blank" class="text-white text-decoration-none">
-            <i class="bi bi-whatsapp"></i> +27 65 2114 047
-          </a>
+  <!-- Enhanced Footer -->
+      <footer class="bg-dark text-white text-center py-4 mt-5">
+        <div class="container">
+          <div class="row">
+            <div class="col-md-12">
+              <img src="/white_icon_transparent_background.png" alt="Payizi Global" class="footer-logo">
+              <h5 class="mb-3">Payizi Global</h5>
+              <h4 class="text-warning mb-3">POWERING ZIMBABWE'S FINANCIAL FUTURE</h4>
+              <p class="mb-2">Payizi makes sending money, paying bills, and supporting loved ones effortless.</p>
+              <p class="mb-2">Join the fintech revolution built for Zimbabweans everywhere.</p>
+              <p class="mb-4">Your security and satisfaction are our top priorities.</p>
+              <div class="mb-3">
+                <a href="mailto:info@payizi.io" class="text-white text-decoration-none me-3">
+                  <i class="bi bi-envelope"></i> info@payizi.io
+                </a>
+                <a href="https://wa.me/27652114047" target="_blank" class="text-white text-decoration-none">
+                  <i class="bi bi-whatsapp"></i> +27 65 2114 047
+                </a>
+              </div>
+              <p class="text-muted small mb-0">
+                © 2025 Payizi Global. All rights reserved.
+              </p>
+            </div>
+          </div>
         </div>
-        <p class="text-muted small mb-0">
-          © 2025 Payizi Global. All rights reserved.
-        </p>
-      </div>
-    </div>
-  </div>
-</footer>
+      </footer>
 
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -354,59 +345,45 @@
   </script>
   <!-- Mobile Menu Toggle Script -->
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      const navbarToggler = document.querySelector('.navbar-toggler');
-      const navbarNav = document.querySelector('.navbar-nav');
-      
-      // Only initialize if both elements exist
-      if (navbarToggler && navbarNav) {
-        
-        // Ensure menu starts closed on page load
+document.addEventListener('DOMContentLoaded', function() {
+  const navbarToggler = document.querySelector('.navbar-toggler-alt');
+  const navbarNav = document.querySelector('.navbar-nav');
+  
+  if (navbarToggler && navbarNav) {
+    navbarNav.classList.remove('show');
+    navbarToggler.classList.add('collapsed');
+    
+    navbarToggler.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      navbarNav.classList.toggle('show');
+      this.classList.toggle('collapsed');
+    });
+    
+    document.addEventListener('click', function(event) {
+      if (!navbarNav.contains(event.target) && !navbarToggler.contains(event.target)) {
         navbarNav.classList.remove('show');
         navbarToggler.classList.add('collapsed');
-        
-        // Toggle menu on button click
-        navbarToggler.addEventListener('click', function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-          
-          navbarNav.classList.toggle('show');
-          this.classList.toggle('collapsed');
-        });
-        
-        // Close menu when clicking outside
-        document.addEventListener('click', function(event) {
-          const isClickInsideNav = navbarNav.contains(event.target);
-          const isClickOnToggler = navbarToggler.contains(event.target);
-          
-          if (!isClickInsideNav && !isClickOnToggler && navbarNav.classList.contains('show')) {
-            navbarNav.classList.remove('show');
-            navbarToggler.classList.add('collapsed');
-          }
-        });
-        
-        // Close menu when clicking on a nav link (mobile only)
-        const navLinks = document.querySelectorAll('.nav-link');
-        navLinks.forEach(link => {
-          link.addEventListener('click', function() {
-            // Only close on mobile
-            if (window.innerWidth < 768) {
-              navbarNav.classList.remove('show');
-              navbarToggler.classList.add('collapsed');
-            }
-          });
-        });
-        
-        // Reset menu state on window resize
-        window.addEventListener('resize', function() {
-          if (window.innerWidth >= 768) {
-            // Desktop - ensure menu is always visible
-            navbarNav.classList.remove('show');
-            navbarToggler.classList.add('collapsed');
-          }
-        });
       }
     });
-    </script>
+    
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('click', function() {
+        if (window.innerWidth < 768) {
+          navbarNav.classList.remove('show');
+          navbarToggler.classList.add('collapsed');
+        }
+      });
+    });
+    
+    window.addEventListener('resize', function() {
+      if (window.innerWidth >= 768) {
+        navbarNav.classList.remove('show');
+        navbarToggler.classList.add('collapsed');
+      }
+    });
+  }
+});
+</script>
 </body>
 </html>
