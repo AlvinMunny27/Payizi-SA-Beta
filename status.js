@@ -70,16 +70,20 @@ async function trackOrder() {
     const url = `${GOOGLE_SHEETS_CONFIG.WEB_APP_URL}?orderId=${encodeURIComponent(orderId)}&action=getOrder`;
     console.log('📡 URL:', url);
     
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+    
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      signal: controller.signal,
       redirect: 'follow',
       mode: 'cors'
     });
     
+    clearTimeout(timeoutId);
+    
     console.log('📡 Response status:', response.status, response.statusText);
+    console.log('📡 Response headers:', [...response.headers.entries()]);
     
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -106,13 +110,16 @@ async function trackOrder() {
     }
     
   } catch (error) {
-    console.error('🚨 Fetch error:', error.message);
-    showError(`Failed to connect to server: ${error.message}. Please check your connection or contact support.`);
+    console.error('🚨 Fetch error:', error.name, error.message);
+    if (error.name === 'AbortError') {
+      showError('Request timed out. Please try again or contact support.');
+    } else {
+      showError(`Failed to connect to server: ${error.message}. Please check your connection or contact support.`);
+    }
   } finally {
     hideLoading();
   }
 }
-
 
 // Add a simple connection test
 async function testSimpleConnection() {
