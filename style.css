@@ -1,4 +1,3 @@
-
 /* Import Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700;800&display=swap');
 
@@ -975,16 +974,150 @@ footer a:hover {
   }
 }
 
-@media (min-width: 1200px) {
-  h1 { font-size: 3rem; }
-  h2 { font-size: 2.5rem; }
-  
-  .custom-form {
-    padding: 3rem;
+/* Dark Mode Adjustments */
+@media (prefers-color-scheme: dark) {
+  body {
+    color: #f8f9fa; /* Light text for contrast */
+    background-color: #212529; /* Very dark gray background */
   }
-  
-  .btn {
-    padding: 1rem 2.5rem;
-    font-size: 1.1rem;
+
+  h1, h2, h3, h4, h5, h6 {
+    color: #e9ecef; /* Off-white for headings */
+  }
+
+  p, .text-muted {
+    color: #ced4da; /* Lighter gray for paragraphs */
+  }
+
+  a {
+    color: #20c997; /* Brighter green for links */
+  }
+
+  a:hover {
+    color: #2dd4bf; /* Lighter hover green */
+  }
+
+  .navbar {
+    background: linear-gradient(135deg, #2a2a3e 0%, #3a3a4e 100%); /* Darker navbar gradient */
+  }
+
+  .navbar-nav {
+    background: linear-gradient(135deg, #2a2a3e 0%, #3a3a4e 100%); /* Match navbar */
+  }
+
+  .nav-link {
+    color: #dee2e6; /* Lighter text */
+  }
+
+  .nav-link:hover,
+  .nav-link.active {
+    color: #1e1e2f; /* Dark blue for contrast on green */
+  }
+
+  .custom-form {
+    background: #2d2d2d; /* Dark gray for forms */
+    border-color: #495057; /* Darker border */
+  }
+
+  .custom-form h4 {
+    color: #e9ecef; /* Off-white heading */
+    border-bottom-color: #20c997; /* Green border */
+  }
+
+  .form-control {
+    color: #f8f9fa;
+    background-color: #343a40;
+    border-color: #495057;
+  }
+
+  .form-control:focus {
+    background-color: #495057;
+    border-color: #20c997;
+    box-shadow: 0 0 0 0.2rem rgba(32, 201, 151, 0.25);
+  }
+
+  .form-control::placeholder {
+    color: #adb5bd; /* Darker placeholder */
+  }
+
+  .card {
+    background: #2d2d2d; /* Dark gray card */
+    border-color: #495057; /* Darker border */
+  }
+
+  .card-header {
+    background: linear-gradient(135deg, #1e1e2f 0%, #2a2a3e 100%); /* Darker header */
+    border-bottom-color: #495057;
+  }
+
+  .alert-success {
+    color: #c3e6cb;
+    background-color: #2f4f2f;
+    border-color: #2f4f2f;
+  }
+
+  .alert-danger {
+    color: #f5c6cb;
+    background-color: #4a2c2c;
+    border-color: #4a2c2c;
+  }
+
+  .alert-warning {
+    color: #fff3cd;
+    background-color: #4e3b00;
+    border-color: #4e3b00;
+  }
+
+  .alert-info {
+    color: #bee5eb;
+    background-color: #1b4d5a;
+    border-color: #1b4d5a;
+  }
+
+  .status-header {
+    background: linear-gradient(135deg, #20c997 0%, #2dd4bf 100%); /* Brighter green gradient */
+  }
+
+  .progress {
+    background-color: #495057; /* Darker progress background */
+  }
+
+  .progress-bar {
+    background: linear-gradient(90deg, #20c997 0%, #2dd4bf 100%); /* Brighter green */
+  }
+
+  footer {
+    background: linear-gradient(135deg, #2a2a3e 0%, #3a3a4e 100%);
+  }
+
+  footer h4 {
+    color: #ffca2c; /* Brighter yellow */
+  }
+
+  footer p {
+    color: #ced4da; /* Lighter gray */
+  }
+
+  footer a {
+    color: #20c997;
+  }
+
+  footer a:hover {
+    background-color: rgba(32, 201, 151, 0.1);
+    color: #e9ecef;
+  }
+
+  .contact-item {
+    border-bottom-color: #495057;
+  }
+
+  .accordion-button:not(.collapsed) {
+    background-color: #495057;
+    border-color: #20c997;
+    color: #e9ecef;
+  }
+
+  .accordion-button:focus {
+    box-shadow: 0 0 0 0.25rem rgba(32, 201, 151, 0.25);
   }
 }
