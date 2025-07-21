@@ -5,21 +5,22 @@ const GOOGLE_SHEETS_CONFIG = {
   WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbyOdpYNrOHTpbXIVVL1AaSlbaPUKxNpCB5bE42BG4IMSj0TBXNg_PmWVhTZAH6b3c-nyQ/exec'
 };
 
-// Add this test function to your status.js
+// Polling state
+let pollingInterval = null;
+const POLLING_INTERVAL_MS = 10000; // Poll every 10 seconds
+
+// Test direct URL access
 function testDirectURL() {
   console.log('🧪 Testing direct URL access...');
-  
   const testUrl = `${GOOGLE_SHEETS_CONFIG.WEB_APP_URL}?orderId=DE3CJ35G&action=getOrder`;
   console.log('🔗 Test URL:', testUrl);
-  
-  // Open this URL in a new browser tab
   window.open(testUrl, '_blank');
 }
 
-// Updated function to match your actual HTML IDs
+// Check HTML elements
 function checkElements() {
-  const trackButton = document.getElementById('trackBtn'); // Changed from 'trackButton'
-  const orderIdInput = document.getElementById('orderRef'); // Changed from 'orderIdInput'
+  const trackButton = document.getElementById('trackBtn');
+  const orderIdInput = document.getElementById('orderRef');
   const loadingSection = document.getElementById('loadingSection');
   const statusSection = document.getElementById('statusSection');
   const errorSection = document.getElementById('errorSection');
@@ -41,43 +42,20 @@ function checkElements() {
   return { trackButton, orderIdInput, loadingSection, statusSection, errorSection };
 }
 
-// Enhanced trackOrder function with better error handling and CORS workaround
-async function trackOrder() {
-  console.log('🔍 trackOrder function called');
+// Fetch order data
+async function fetchOrder(orderId) {
+  const url = `${GOOGLE_SHEETS_CONFIG.WEB_APP_URL}?orderId=${encodeURIComponent(orderId)}&action=getOrder`;
+  console.log('📡 URL:', url);
   
-  const { trackButton, orderIdInput, loadingSection, statusSection, errorSection } = checkElements();
-  
-  if (!trackButton || !orderIdInput) {
-    console.error('❌ Missing required elements');
-    alert('Error: Required page elements not found');
-    return;
-  }
-  
-  const orderId = orderIdInput.value.trim();
-  console.log('📝 Order ID entered:', orderId);
-  
-  if (!orderId) {
-    console.error('❌ No order ID provided');
-    alert('Please enter an order ID');
-    return;
-  }
-  
-  // Show loading state
-  showLoading();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
   
   try {
-    console.log('🌐 Making fetch request...');
-    const url = `${GOOGLE_SHEETS_CONFIG.WEB_APP_URL}?orderId=${encodeURIComponent(orderId)}&action=getOrder`;
-    console.log('📡 URL:', url);
-    
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
-    
     const response = await fetch(url, {
       method: 'GET',
-      signal: controller.signal,
       redirect: 'follow',
-      mode: 'cors'
+      mode: 'cors',
+      signal: controller.signal
     });
     
     clearTimeout(timeoutId);
@@ -101,16 +79,54 @@ async function trackOrder() {
     }
     
     console.log('📊 Parsed data:', data);
+    return data;
+  } catch (error) {
+    console.error('🚨 Fetch error:', error.name, error.message);
+    throw error;
+  }
+}
+
+// Enhanced trackOrder with polling
+async function trackOrder() {
+  console.log('🔍 trackOrder function called');
+  
+  const { trackButton, orderIdInput, loadingSection, statusSection, errorSection } = checkElements();
+  
+  if (!trackButton || !orderIdInput) {
+    console.error('❌ Missing required elements');
+    alert('Error: Required page elements not found');
+    return;
+  }
+  
+  const orderId = orderIdInput.value.trim();
+  console.log('📝 Order ID entered:', orderId);
+  
+  if (!orderId) {
+    console.error('❌ No order ID provided');
+    alert('Please enter an order ID');
+    return;
+  }
+  
+  // Stop any existing polling
+  stopPolling();
+  
+  // Show loading state
+  showLoading();
+  
+  try {
+    const data = await fetchOrder(orderId);
     
     if (data.success) {
       displayOrderStatus(data.data);
+      // Start polling if status is not terminal
+      if (data.data.status.toLowerCase() !== 'completed' && data.data.status.toLowerCase() !== 'failed') {
+        startPolling(orderId);
+      }
     } else {
       console.error('🚨 Server returned error:', data.error);
       showError(data.error || 'Order not found');
     }
-    
   } catch (error) {
-    console.error('🚨 Fetch error:', error.name, error.message);
     if (error.name === 'AbortError') {
       showError('Request timed out. Please try again or contact support.');
     } else {
@@ -121,46 +137,62 @@ async function trackOrder() {
   }
 }
 
-// Add a simple connection test
-async function testSimpleConnection() {
-  console.log('🧪 Testing simple connection...');
+// Start polling for status updates
+function startPolling(orderId) {
+  console.log('🔄 Starting polling for order:', orderId);
+  const pollingStatus = document.getElementById('pollingStatus');
+  if (pollingStatus) {
+    pollingStatus.textContent = 'Checking for updates...';
+    pollingStatus.style.display = 'block';
+  }
   
-  try {
-    const testUrl = `${GOOGLE_SHEETS_CONFIG.WEB_APP_URL}?orderId=TEST&action=getOrder`;
-    console.log('🔗 Test URL:', testUrl);
-    
-    const response = await fetch(testUrl, {
-      method: 'GET',
-      mode: 'no-cors' // Try no-cors mode for testing
-    });
-    
-    console.log('✅ Test response received (no-cors mode)');
-    console.log('📡 Response type:', response.type);
-    console.log('📡 Response status:', response.status);
-    
-    return { success: true, status: response.status, mode: 'no-cors' };
-  } catch (error) {
-    console.error('❌ Simple connection test failed:', error);
-    return { success: false, error: error.message };
+  pollingInterval = setInterval(async () => {
+    try {
+      const data = await fetchOrder(orderId);
+      if (data.success) {
+        console.log('🔄 Polling update:', data.data);
+        displayOrderStatus(data.data);
+        // Stop polling if status is terminal
+        if (data.data.status.toLowerCase() === 'completed' || data.data.status.toLowerCase() === 'failed') {
+          stopPolling();
+          if (pollingStatus) {
+            pollingStatus.textContent = 'Order status finalized. Updates stopped.';
+          }
+        }
+      } else {
+        console.error('🚨 Polling error:', data.error);
+        stopPolling();
+        showError(data.error || 'Order not found during update');
+      }
+    } catch (error) {
+      console.error('🚨 Polling fetch error:', error.message);
+      stopPolling();
+      showError(`Failed to fetch update: ${error.message}. Updates stopped.`);
+    }
+  }, POLLING_INTERVAL_MS);
+}
+
+// Stop polling
+function stopPolling() {
+  if (pollingInterval) {
+    console.log('🛑 Stopping polling');
+    clearInterval(pollingInterval);
+    pollingInterval = null;
+    const pollingStatus = document.getElementById('pollingStatus');
+    if (pollingStatus) {
+      pollingStatus.style.display = 'none';
+    }
   }
 }
 
-// Add this to the end of your file for testing
-console.log('✅ Enhanced status.js loaded with JSONP fallback');
-
-// Show loading state using your HTML structure
+// Show loading state
 function showLoading() {
   console.log('⏳ Showing loading state');
-  
   const { trackButton, loadingSection, statusSection, errorSection } = checkElements();
-  
-  // Disable button and show loading text
   if (trackButton) {
     trackButton.innerHTML = '⏳ Searching...';
     trackButton.disabled = true;
   }
-  
-  // Show loading section, hide others
   if (loadingSection) loadingSection.style.display = 'block';
   if (statusSection) statusSection.style.display = 'none';
   if (errorSection) errorSection.style.display = 'none';
@@ -169,30 +201,23 @@ function showLoading() {
 // Hide loading state
 function hideLoading() {
   console.log('✅ Hiding loading state');
-  
   const { trackButton, loadingSection } = checkElements();
-  
-  // Reset button
   if (trackButton) {
     trackButton.innerHTML = 'Track Order';
     trackButton.disabled = false;
   }
-  
-  // Hide loading section
   if (loadingSection) loadingSection.style.display = 'none';
 }
 
-// Display order status using your existing HTML structure
+// Display order status
 function displayOrderStatus(orderData) {
   console.log('🎨 Displaying order:', orderData);
   
   const { statusSection, errorSection } = checkElements();
   
-  // Hide error section, show status section
   if (errorSection) errorSection.style.display = 'none';
   if (statusSection) statusSection.style.display = 'block';
   
-  // Populate the existing HTML elements with order data
   updateElement('statusOrderRef', orderData.orderId);
   updateElement('statusCustomerName', orderData.customerName);
   updateElement('statusEmail', orderData.customerEmail);
@@ -204,24 +229,17 @@ function displayOrderStatus(orderData) {
   updateElement('statusLocation', `${orderData.location}, ${orderData.destination}`);
   updateElement('paymentRef', orderData.orderId);
   
-  // Update status badge
   const statusBadge = document.getElementById('statusBadge');
   if (statusBadge) {
     statusBadge.textContent = orderData.status.toUpperCase();
     statusBadge.className = `badge ${getStatusBadgeClass(orderData.status)}`;
   }
   
-  // Update progress bar and timeline
   updateProgress(orderData.status);
   
-  // Show/hide payment instructions
   const paymentInstructions = document.getElementById('paymentInstructions');
   if (paymentInstructions) {
-    if (orderData.status.toLowerCase() === 'pending') {
-      paymentInstructions.style.display = 'block';
-    } else {
-      paymentInstructions.style.display = 'none';
-    }
+    paymentInstructions.style.display = orderData.status.toLowerCase() === 'pending' ? 'block' : 'none';
   }
 }
 
@@ -244,7 +262,7 @@ function getStatusBadgeClass(status) {
   return statusClasses[status.toLowerCase()] || 'bg-secondary';
 }
 
-// Update progress bar and timeline based on status
+// Update progress bar and timeline
 function updateProgress(status) {
   const progressBar = document.getElementById('progressBar');
   const progressText = document.getElementById('progressText');
@@ -297,7 +315,6 @@ function updateTimelineStep(stepId, status) {
   if (step) {
     step.className = `col timeline-step ${status}`;
     
-    // Add visual indicators
     const icon = step.querySelector('.timeline-icon');
     if (icon) {
       switch (status) {
@@ -321,29 +338,24 @@ function updateTimelineStep(stepId, status) {
   }
 }
 
-// Show error message using your existing HTML structure
+// Show error message
 function showError(message) {
   console.log('🚨 Showing error:', message);
-  
   const { statusSection, errorSection } = checkElements();
-  
-  // Show error section, hide status section
   if (statusSection) statusSection.style.display = 'none';
   if (errorSection) {
     errorSection.style.display = 'block';
-    
-    // Update error message if needed
     const errorText = errorSection.querySelector('p');
     if (errorText && message !== 'Order not found') {
       errorText.textContent = message;
     }
   }
+  stopPolling();
 }
 
 // Format date helper
 function formatDate(dateString) {
   if (!dateString) return 'N/A';
-  
   const date = new Date(dateString);
   return date.toLocaleString('en-US', {
     year: 'numeric',
@@ -359,7 +371,6 @@ function formatDate(dateString) {
 document.addEventListener('DOMContentLoaded', function() {
   console.log('📄 DOM loaded, initializing...');
   
-  // Wait a moment for all elements to be ready
   setTimeout(() => {
     const { trackButton, orderIdInput } = checkElements();
     
@@ -383,7 +394,6 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
     
-    // Add refresh button functionality
     const refreshBtn = document.getElementById('refreshBtn');
     if (refreshBtn) {
       refreshBtn.addEventListener('click', function() {
@@ -392,11 +402,27 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
     
+    const stopPollingBtn = document.getElementById('stopPollingBtn');
+    if (stopPollingBtn) {
+      stopPollingBtn.addEventListener('click', function() {
+        console.log('🛑 Stop polling button clicked');
+        stopPolling();
+      });
+    }
+    
+    const downloadReceiptBtn = document.getElementById('downloadReceiptBtn');
+    if (downloadReceiptBtn) {
+      downloadReceiptBtn.addEventListener('click', function() {
+        console.log('📥 Download receipt button clicked');
+        downloadReceipt();
+      });
+    }
+    
     console.log('🎉 Status tracking initialized successfully');
   }, 500);
 });
 
-// Test function you can call from console
+// Test connection
 function testConnection() {
   console.log('🧪 Testing connection...');
   fetch(`${GOOGLE_SHEETS_CONFIG.WEB_APP_URL}?orderId=TEST&action=getOrder`)
@@ -405,9 +431,56 @@ function testConnection() {
     .catch(error => console.error('🚨 Test error:', error));
 }
 
+// Download receipt as PDF
+function downloadReceipt() {
+  const orderData = {}; // Populate this from displayOrderStatus state or current data
+  const { statusSection } = checkElements();
+  
+  if (!statusSection || statusSection.style.display === 'none') {
+    alert('No order data available to download. Track an order first.');
+    return;
+  }
+  
+  // Extract data from current UI elements or maintain state
+  orderData.orderId = document.getElementById('statusOrderRef').textContent;
+  orderData.customerName = document.getElementById('statusCustomerName').textContent;
+  orderData.email = document.getElementById('statusEmail').textContent;
+  orderData.status = document.getElementById('statusBadge').textContent.toLowerCase();
+  orderData.usdAmount = document.getElementById('statusUsdAmount').textContent.replace('$', '');
+  orderData.zarTotal = document.getElementById('statusZarTotal').textContent.replace('R ', '');
+  orderData.exchangeRate = document.getElementById('statusRate').textContent;
+  orderData.beneficiary = document.getElementById('statusBeneficiary').textContent;
+  orderData.location = document.getElementById('statusLocation').textContent;
+  orderData.lastUpdated = document.getElementById('statusLastUpdated').textContent;
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  doc.setFontSize(16);
+  doc.text('Payizi Global - Receipt', 105, 20, { align: 'center' });
+  doc.setFontSize(12);
+  doc.text(`Order Reference: ${orderData.orderId}`, 20, 40);
+  doc.text(`Customer: ${orderData.customerName}`, 20, 50);
+  doc.text(`Email: ${orderData.email}`, 20, 60);
+  doc.text(`Status: ${orderData.status.toUpperCase()}`, 20, 70);
+  doc.text(`Last Updated: ${orderData.lastUpdated}`, 20, 80);
+  doc.text(`USD Amount: ${orderData.usdAmount}`, 20, 90);
+  doc.text(`ZAR Total: ${orderData.zarTotal}`, 20, 100);
+  doc.text(`Exchange Rate: ${orderData.exchangeRate}`, 20, 110);
+  doc.text(`Beneficiary: ${orderData.beneficiary}`, 20, 120);
+  doc.text(`Location: ${orderData.location}`, 20, 130);
+
+  doc.setFontSize(10);
+  doc.text('Thank you for using Payizi Global!', 105, 150, { align: 'center' });
+  doc.text('© 2025 Payizi Global. All rights reserved.', 105, 160, { align: 'center' });
+
+  doc.save(`${orderData.orderId}_receipt.pdf`);
+}
+
 // Global error handler
 window.addEventListener('error', function(e) {
   console.error('🌍 Global error:', e.error);
+  stopPolling();
 });
 
-console.log('✅ Status.js setup complete');
+console.log('✅ Status.js setup complete with dynamic updates');
